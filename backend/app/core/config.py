@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8000
 
+    # Database
+    DATABASE_URL: str = "sqlite+aiosqlite:///./backend/app/db/dev.db"
+
     # Logging
     LOG_LEVEL: str = "INFO"
 

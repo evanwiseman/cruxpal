@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from backend.app.api import athletes
 from backend.app.core.config import settings
 from backend.app.core.logging import setup_logging
 
@@ -16,3 +17,9 @@ app = FastAPI(
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+# include router under API prefix
+app.include_router(
+    athletes.router, prefix=f"{settings.API_PREFIX}/athletes", tags=["Athletes"]
+)
