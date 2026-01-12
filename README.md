@@ -9,5 +9,5 @@ uv pip install -r pyproject.toml
 
 
 
-./scripts/dev.sh
+./scripts/start_dev.sh
 ```
