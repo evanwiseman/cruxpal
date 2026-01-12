@@ -6,12 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models.athlete import Athlete
 from backend.app.db.session import get_db
-from backend.app.schemas.athlete import (
-    AthleteCreate,
-    AthleteDelete,
-    AthleteRead,
-    AthleteUpdate,
-)
+from backend.app.schemas.athlete import AthleteCreate, AthleteRead, AthleteUpdate
 
 router = APIRouter()
 
@@ -68,9 +63,9 @@ async def update_athlete(
 
 
 # /.../athletes DELETE
-@router.delete("/", response_model=dict)
-async def delete_athlete(payload: AthleteDelete, db: AsyncSession = Depends(get_db)):
-    athlete = await db.get(Athlete, payload.id)
+@router.delete("/{athlete_id}", response_model=dict)
+async def delete_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
+    athlete = await db.get(Athlete, athlete_id)
     if not athlete:
         raise HTTPException(status_code=404, detail="Athlete not found")
     await db.delete(athlete)

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,14 +17,12 @@ class AthleteRead(BaseModel):
     name: str
     email: str
     date_of_birth: Optional[date] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
+
 # Used when updating athlete info
 class AthleteUpdate(BaseModel):
-    email: str
-
-
-# Used when deleting an athelete
-class AthleteDelete(BaseModel):
-    id: int
+    email: str = Field(..., example="email@example.com")
