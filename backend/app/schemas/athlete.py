@@ -19,3 +19,12 @@ class AthleteRead(BaseModel):
     date_of_birth: Optional[date] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+# Used when updating athlete info
+class AthleteUpdate(BaseModel):
+    email: str
+
+
+# Used when deleting an athelete
+class AthleteDelete(BaseModel):
+    id: int
