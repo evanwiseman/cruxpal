@@ -1,14 +1,19 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.routes import raise_not_found
 from backend.app.db.models.athlete import Athlete
 from backend.app.db.session import get_db
 from backend.app.schemas.athlete import AthleteCreate, AthleteRead, AthleteUpdate
 
 router = APIRouter()
+
+
+def rasie_not_found():
+    raise HTTPException(status_code=404, detail="Athlete not found")
 
 
 # /.../athletes POST
@@ -38,7 +43,7 @@ async def get_all_athletes(db: AsyncSession = Depends(get_db)):
 async def get_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
     athlete = await db.get(Athlete, athlete_id)
     if not athlete:
-        raise HTTPException(status_code=404, detail="Athlete not found")
+        raise_not_found()
     return athlete
 
 
@@ -49,7 +54,7 @@ async def update_athlete(
 ):
     athlete = await db.get(Athlete, athlete_id)
     if not athlete:
-        raise HTTPException(status_code=404, detail="Athlete not found")
+        raise_not_found()
 
     # update fields
     athlete.email = payload.email
@@ -63,11 +68,11 @@ async def update_athlete(
 
 
 # /.../athletes DELETE
-@router.delete("/{athlete_id}", response_model=dict)
+@router.delete("/{athlete_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
     athlete = await db.get(Athlete, athlete_id)
     if not athlete:
-        raise HTTPException(status_code=404, detail="Athlete not found")
+        raise_not_found()
     await db.delete(athlete)
     await db.commit()
-    return {"message": "Deleted successfully"}
+    return
