@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from backend.app.api import athletes, routes
+from backend.app.api import ascents, athletes, routes
 from backend.app.core.config import settings
 from backend.app.core.logging import setup_logging
 
@@ -31,6 +31,12 @@ app.include_router(
 
 app.include_router(
     routes.router,
-    prefix=get_with_prefix("route"),
+    prefix=get_with_prefix("routes"),
     tags=["Routes"],
+)
+
+app.include_router(
+    ascents.router,
+    prefix=get_with_prefix("ascents"),
+    tags=["Ascents"],
 )

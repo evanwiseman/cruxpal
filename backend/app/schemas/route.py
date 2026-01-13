@@ -12,6 +12,7 @@ class RouteCreate(BaseModel):
 
 # Used when reading a route
 class RouteRead(BaseModel):
+    id: int
     name: str
     difficulty: str
     created_at: Optional[datetime] = None
