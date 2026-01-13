@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.api.routes import raise_not_found
 from backend.app.db.models.ascent import Ascent
 from backend.app.db.models.athlete import Athlete
 from backend.app.db.models.route import Route
@@ -16,8 +15,11 @@ from backend.app.schemas.route import RouteRead
 router = APIRouter()
 
 
-def rasie_not_found():
-    raise HTTPException(status_code=404, detail="Athlete not found")
+async def require_athlete(athlete_id: int, db: AsyncSession) -> Athlete:
+    athlete = await db.get(Athlete, athlete_id)
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Athlete not found")
+    return athlete
 
 
 @router.post("/", response_model=AthleteRead)
@@ -42,14 +44,14 @@ async def get_all_athletes(db: AsyncSession = Depends(get_db)):
 
 @router.get("/{athlete_id}", response_model=AthleteRead)
 async def get_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
-    athlete = await db.get(Athlete, athlete_id)
-    if not athlete:
-        raise_not_found()
+    athlete = await require_athlete(athlete_id, db)
     return athlete
 
 
 @router.get("/{athlete_id}/ascents", response_model=List[AscentRead])
 async def get_ascents(athlete_id: int, db: AsyncSession = Depends(get_db)):
+    await require_athlete(athlete_id, db)
+
     result = await db.execute(select(Ascent).where(Ascent.athlete_id == athlete_id))
     ascents = result.scalars().all()
     return ascents
@@ -57,6 +59,8 @@ async def get_ascents(athlete_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/{athlete_id}/routes", response_model=List[RouteRead])
 async def get_routes(athlete_id: int, db: AsyncSession = Depends(get_db)):
+    await require_athlete(athlete_id, db)
+
     result = await db.execute(
         select(Route).join(Ascent).where(Ascent.athlete_id == athlete_id)
     )
@@ -68,15 +72,11 @@ async def get_routes(athlete_id: int, db: AsyncSession = Depends(get_db)):
 async def update_athlete(
     athlete_id: int, payload: AthleteUpdate, db: AsyncSession = Depends(get_db)
 ):
-    athlete = await db.get(Athlete, athlete_id)
-    if not athlete:
-        raise_not_found()
+    athlete = await require_athlete(athlete_id, db)
 
-    # update fields
-    athlete.email = payload.email
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(athlete, field, value)
 
-    # persist changes
-    db.add(athlete)
     await db.commit()
     await db.refresh(athlete)
 
@@ -85,9 +85,7 @@ async def update_athlete(
 
 @router.delete("/{athlete_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
-    athlete = await db.get(Athlete, athlete_id)
-    if not athlete:
-        raise_not_found()
+    athlete = await require_athlete(athlete_id, db)
+
     await db.delete(athlete)
     await db.commit()
-    return

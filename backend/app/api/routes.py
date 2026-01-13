@@ -14,8 +14,11 @@ from backend.app.schemas.route import RouteCreate, RouteRead, RouteUpdate
 router = APIRouter()
 
 
-def raise_not_found():
-    raise HTTPException(status_code=404, detail="Route not found")
+async def require_route(route_id: int, db: AsyncSession):
+    route = await db.get(Route, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    return route
 
 
 @router.post("/", response_model=RouteRead)
@@ -39,14 +42,14 @@ async def get_all_routes(db: AsyncSession = Depends(get_db)):
 
 @router.get("/{route_id}", response_model=RouteRead)
 async def get_route(route_id: int, db: AsyncSession = Depends(get_db)):
-    route = await db.get(Route, route_id)
-    if not route:
-        raise_not_found()
+    route = await require_route(route_id, db)
     return route
 
 
 @router.get("/{route_id}/athletes", response_model=List[AthleteRead])
 async def get_athletes(route_id: int, db: AsyncSession = Depends(get_db)):
+    require_route(route_id, db)
+
     result = await db.execute(
         select(Athlete).join(Ascent).where(Ascent.route_id == route_id)
     )
@@ -58,13 +61,10 @@ async def get_athletes(route_id: int, db: AsyncSession = Depends(get_db)):
 async def update_route(
     route_id: int, payload: RouteUpdate, db: AsyncSession = Depends(get_db)
 ):
-    route = await db.get(Route, route_id)
-    if not route:
-        raise_not_found()
+    route = await require_route(route_id, db)
 
-    # update route
-    route.name = payload.name
-    route.difficulty = payload.difficulty
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(route, field, value)
 
     db.add(route)
     await db.commit()
@@ -74,10 +74,7 @@ async def update_route(
 
 @router.delete("/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_route(route_id: int, db: AsyncSession = Depends(get_db)):
-    route = await db.get(Route, route_id)
-    if not route:
-        raise_not_found()
+    route = await require_route(route_id, db)
 
     await db.delete(route)
     await db.commit()
-    return

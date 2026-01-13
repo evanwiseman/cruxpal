@@ -26,3 +26,9 @@ class AscentRead(BaseModel):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AscentUpdate(BaseModel):
+    sent: bool
+    attempt: int
+    notes: Optional[str] = None
