@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,10 +36,24 @@ async def create_athlete(payload: AthleteCreate, db: AsyncSession = Depends(get_
 
 
 @router.get("/", response_model=List[AthleteRead])
-async def get_all_athletes(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Athlete))
-    athletes = result.scalars().all()
-    return athletes
+async def get_all_athletes(
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+    limit: int = Query(50, le=100),
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    statement = select(Athlete)
+    if name:
+        statement = statement.where(Athlete.name.ilike(f"%{name}%"))
+
+    if email:
+        statement = statement.where(Athlete.email == email)
+
+    statement = statement.limit(limit).offset(offset)
+
+    result = await db.execute(statement)
+    return result.scalars().all()
 
 
 @router.get("/{athlete_id}", response_model=AthleteRead)
@@ -49,23 +63,46 @@ async def get_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{athlete_id}/ascents", response_model=List[AscentRead])
-async def get_ascents(athlete_id: int, db: AsyncSession = Depends(get_db)):
+async def get_ascents(
+    athlete_id: int,
+    sent: Optional[bool] = None,
+    route_id: Optional[bool] = None,
+    limit: int = Query(50, le=100),
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
     await require_athlete(athlete_id, db)
 
-    result = await db.execute(select(Ascent).where(Ascent.athlete_id == athlete_id))
-    ascents = result.scalars().all()
-    return ascents
+    statement = select(Ascent).where(Ascent.athlete_id == athlete_id)
+    if sent is not None:
+        statement = statement.where(Ascent.sent == sent)
+
+    if route_id is not None:
+        statement = statement.where(Ascent.route_id == route_id)
+
+    statement = statement.limit(limit).offset(offset)
+    result = await db.execute(statement)
+    return result.scalars().all()
 
 
 @router.get("/{athlete_id}/routes", response_model=List[RouteRead])
-async def get_routes(athlete_id: int, db: AsyncSession = Depends(get_db)):
+async def get_routes(
+    athlete_id: int,
+    sent: Optional[bool] = None,
+    limit: int = Query(50, le=100),
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
     await require_athlete(athlete_id, db)
 
-    result = await db.execute(
-        select(Route).join(Ascent).where(Ascent.athlete_id == athlete_id)
-    )
-    routes = result.scalars().all()
-    return routes
+    statement = select(Route).join(Ascent).where(Ascent.athlete_id == athlete_id)
+    if sent is not None:
+        statement = statement.where(Ascent.sent == sent)
+
+    statement = statement.distinct().limit(limit).offset(offset)
+
+    result = await db.execute(statement)
+    return result.scalars().all()
 
 
 @router.put("/{athlete_id}", response_model=AthleteRead)
