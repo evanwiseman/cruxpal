@@ -1,10 +1,11 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from jose import jwt
 from passlib.context import CryptContext
 
 from backend.app.core.config import settings
+from backend.app.utils.time import utc_now
 
 pwd_context = CryptContext(
     schemes=["argon2"],
@@ -26,7 +27,7 @@ def create_jwt_token(
 ) -> str:
     payload = {
         "sub": subject,
-        "exp": datetime.utcnow() + expires_delta,
+        "exp": utc_now() + expires_delta,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 

@@ -1,6 +1,8 @@
+import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,13 +16,23 @@ from backend.app.core.security import (
 from backend.app.db.models.token import RefreshToken
 from backend.app.db.models.user import User
 from backend.app.db.session import get_db
-from backend.app.schemas.auth import LoginRequest
 from backend.app.schemas.token import Token
 from backend.app.schemas.user import UserCreate
 from backend.app.services.auth import authenticate_user
 from backend.app.utils.time import utc_now
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+# At the top with your other imports
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+
+@router.get("/debug-token")
+async def debug_token(token: str = Depends(oauth2_scheme)):
+    """Debug: Check if token is being received"""
+    return {"token_preview": token[:30] + "...", "token_length": len(token)}
 
 
 @router.get("/me")
@@ -76,14 +88,18 @@ async def signup(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
     await db.commit()
+    logger.info(f'successfully signed up {{"email": "{user.email}"}}')
     return {"message": "ok"}
 
 
-@router.post("/login")
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+@router.post("/login", response_model=Token)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),  # Changed from payload: LoginRequest
+    db: AsyncSession = Depends(get_db),
+):
     user = await authenticate_user(
-        payload.email,
-        payload.password,
+        form_data.username,  # OAuth2 uses 'username' field, but you can use it for email
+        form_data.password,
         db,
     )
 
@@ -91,6 +107,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     jwt_token = create_jwt_token(subject=str(user.id))
@@ -105,9 +122,10 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     )
 
     await db.commit()
+    logger.info(f'successfully logged in {{"email": "{user.email}"}}')
 
     return {
         "access_token": jwt_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer",
+        "refresh_token": refresh_token,
     }
