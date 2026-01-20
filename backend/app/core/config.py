@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Auth
+    SECRET_KEY: str = "super-secret-key"
+    ALGORITHM: str = "HS256"
+    JWT_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
