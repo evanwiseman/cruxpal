@@ -7,21 +7,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.deps import get_current_user
+from backend.app.core.auth import create_jwt_token, create_refresh_token, hash_password
 from backend.app.core.config import settings
-from backend.app.core.security import (
-    create_jwt_token,
-    create_refresh_token,
-    hash_password,
-)
-from backend.app.db.models.token import RefreshToken
+from backend.app.core.endpoints import endpoints
+from backend.app.db.models.refresh_token import RefreshToken
 from backend.app.db.models.user import User
 from backend.app.db.session import get_db
-from backend.app.schemas.token import Token
-from backend.app.schemas.user import UserCreate
+from backend.app.schemas.auth import RegisterRequest
+from backend.app.schemas.refresh_token import Token
 from backend.app.services.auth import authenticate_user
 from backend.app.utils.time import utc_now
 
 router = APIRouter()
+routes = endpoints.AuthRoutes()
 logger = logging.getLogger(__name__)
 
 
@@ -29,18 +27,18 @@ logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
-@router.get("/debug-token")
+@router.get(routes.DEBUG_TOKEN)
 async def debug_token(token: str = Depends(oauth2_scheme)):
     """Debug: Check if token is being received"""
     return {"token_preview": token[:30] + "...", "token_length": len(token)}
 
 
-@router.get("/me")
+@router.get(routes.ME)
 async def me(user: User = Depends(get_current_user)):
     return user
 
 
-@router.post("/refresh", response_model=Token)
+@router.post(routes.REFRESH, response_model=Token)
 async def refresh(refresh_token: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(RefreshToken).where(
@@ -80,8 +78,8 @@ async def refresh(refresh_token: str, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.post("/signup")
-async def signup(payload: UserCreate, db: AsyncSession = Depends(get_db)):
+@router.post(routes.SIGNUP)
+async def signup(payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
     user = User(
         email=payload.email,
         hashed_password=hash_password(payload.password),
@@ -92,7 +90,7 @@ async def signup(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     return {"message": "ok"}
 
 
-@router.post("/login", response_model=Token)
+@router.post(routes.LOGIN, response_model=Token)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),  # Changed from payload: LoginRequest
     db: AsyncSession = Depends(get_db),

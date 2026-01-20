@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.core.security import verify_password
+from backend.app.core.auth import verify_password
 from backend.app.db.models.user import User
 
 

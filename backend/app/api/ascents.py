@@ -6,12 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.athletes import require_athlete
 from backend.app.api.routes import require_route
+from backend.app.core.endpoints import endpoints
 from backend.app.db.models.ascent import Ascent
 from backend.app.db.session import get_db
 from backend.app.schemas.ascent import AscentCreate, AscentRead, AscentUpdate
 
 router = APIRouter()
-
+routes = endpoints.AscentsRoutes()
 
 async def require_ascent(ascent_id: int, db: AsyncSession) -> Ascent:
     ascent = await db.get(Ascent, ascent_id)
@@ -20,7 +21,7 @@ async def require_ascent(ascent_id: int, db: AsyncSession) -> Ascent:
     return ascent
 
 
-@router.post("/", response_model=AscentRead)
+@router.post(routes.CREATE, response_model=AscentRead)
 async def create_ascent(payload: AscentCreate, db: AsyncSession = Depends(get_db)):
     await require_athlete(payload.athlete_id, db)
     await require_route(payload.route_id, db)
@@ -39,20 +40,20 @@ async def create_ascent(payload: AscentCreate, db: AsyncSession = Depends(get_db
     return ascent
 
 
-@router.get("/", response_model=List[AscentRead])
+@router.get(routes.LIST, response_model=List[AscentRead])
 async def get_all_ascents(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Ascent))
     ascents = result.scalars().all()
     return ascents
 
 
-@router.get("/{ascent_id}", response_model=AscentRead)
+@router.get(routes.GET_BY_ID, response_model=AscentRead)
 async def get_ascent(ascent_id: int, db: AsyncSession = Depends(get_db)):
     ascent = await require_ascent(ascent_id, db)
     return ascent
 
 
-@router.put("/{ascent_id}", response_model=AscentRead)
+@router.put(routes.UPDATE, response_model=AscentRead)
 async def update_ascent(
     ascent_id: int, payload: AscentUpdate, db: AsyncSession = Depends(get_db)
 ):
@@ -67,7 +68,7 @@ async def update_ascent(
     return ascent
 
 
-@router.delete("/{ascent_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(routes.DELETE, status_code=status.HTTP_204_NO_CONTENT)
 async def delete_ascent(ascent_id: int, db: AsyncSession = Depends(get_db)):
     ascent = await require_ascent(ascent_id, db)
 

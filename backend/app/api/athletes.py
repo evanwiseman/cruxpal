@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.core.endpoints import endpoints
 from backend.app.db.models.ascent import Ascent
 from backend.app.db.models.athlete import Athlete
 from backend.app.db.models.route import Route
@@ -13,6 +14,7 @@ from backend.app.schemas.athlete import AthleteCreate, AthleteRead, AthleteUpdat
 from backend.app.schemas.route import RouteRead
 
 router = APIRouter()
+routes = endpoints.AthletesRoutes()
 
 
 async def require_athlete(athlete_id: int, db: AsyncSession) -> Athlete:
@@ -22,7 +24,7 @@ async def require_athlete(athlete_id: int, db: AsyncSession) -> Athlete:
     return athlete
 
 
-@router.post("/", response_model=AthleteRead)
+@router.post(routes.CREATE, response_model=AthleteRead)
 async def create_athlete(payload: AthleteCreate, db: AsyncSession = Depends(get_db)):
     athlete = Athlete(
         name=payload.name,
@@ -35,7 +37,7 @@ async def create_athlete(payload: AthleteCreate, db: AsyncSession = Depends(get_
     return athlete
 
 
-@router.get("/", response_model=List[AthleteRead])
+@router.get(routes.LIST, response_model=List[AthleteRead])
 async def get_all_athletes(
     name: Optional[str] = None,
     email: Optional[str] = None,
@@ -56,13 +58,13 @@ async def get_all_athletes(
     return result.scalars().all()
 
 
-@router.get("/{athlete_id}", response_model=AthleteRead)
+@router.get(routes.GET_BY_ID, response_model=AthleteRead)
 async def get_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
     athlete = await require_athlete(athlete_id, db)
     return athlete
 
 
-@router.get("/{athlete_id}/ascents", response_model=List[AscentRead])
+@router.get(routes.LIST_ASCENTS, response_model=List[AscentRead])
 async def get_ascents(
     athlete_id: int,
     sent: Optional[bool] = None,
@@ -85,7 +87,7 @@ async def get_ascents(
     return result.scalars().all()
 
 
-@router.get("/{athlete_id}/routes", response_model=List[RouteRead])
+@router.get(routes.LIST_ROUTES, response_model=List[RouteRead])
 async def get_routes(
     athlete_id: int,
     sent: Optional[bool] = None,
@@ -105,7 +107,7 @@ async def get_routes(
     return result.scalars().all()
 
 
-@router.put("/{athlete_id}", response_model=AthleteRead)
+@router.put(routes.UPDATE, response_model=AthleteRead)
 async def update_athlete(
     athlete_id: int, payload: AthleteUpdate, db: AsyncSession = Depends(get_db)
 ):
@@ -120,7 +122,7 @@ async def update_athlete(
     return athlete
 
 
-@router.delete("/{athlete_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(routes.DELETE, status_code=status.HTTP_204_NO_CONTENT)
 async def delete_athlete(athlete_id: int, db: AsyncSession = Depends(get_db)):
     athlete = await require_athlete(athlete_id, db)
 

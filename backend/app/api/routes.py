@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.core.endpoints import endpoints
 from backend.app.db.models.ascent import Ascent
 from backend.app.db.models.athlete import Athlete
 from backend.app.db.models.route import Route
@@ -12,6 +13,7 @@ from backend.app.schemas.athlete import AthleteRead
 from backend.app.schemas.route import RouteCreate, RouteRead, RouteUpdate
 
 router = APIRouter()
+routes = endpoints.RoutesRoutes()
 
 
 async def require_route(route_id: int, db: AsyncSession):
@@ -21,7 +23,7 @@ async def require_route(route_id: int, db: AsyncSession):
     return route
 
 
-@router.post("/", response_model=RouteRead)
+@router.post(routes.CREATE, response_model=RouteRead)
 async def create_route(payload: RouteCreate, db: AsyncSession = Depends(get_db)):
     route = Route(
         name=payload.name,
@@ -33,20 +35,20 @@ async def create_route(payload: RouteCreate, db: AsyncSession = Depends(get_db))
     return route
 
 
-@router.get("/", response_model=List[RouteRead])
+@router.get(routes.LIST, response_model=List[RouteRead])
 async def get_all_routes(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Route))
     routes = result.scalars().all()
     return routes
 
 
-@router.get("/{route_id}", response_model=RouteRead)
+@router.get(routes.GET_BY_ID, response_model=RouteRead)
 async def get_route(route_id: int, db: AsyncSession = Depends(get_db)):
     route = await require_route(route_id, db)
     return route
 
 
-@router.get("/{route_id}/athletes", response_model=List[AthleteRead])
+@router.get(routes.LIST_ATHLETES, response_model=List[AthleteRead])
 async def get_athletes(route_id: int, db: AsyncSession = Depends(get_db)):
     require_route(route_id, db)
 
@@ -57,7 +59,7 @@ async def get_athletes(route_id: int, db: AsyncSession = Depends(get_db)):
     return athletes
 
 
-@router.put("/{route_id}", response_model=RouteRead)
+@router.put(routes.UPDATE, response_model=RouteRead)
 async def update_route(
     route_id: int, payload: RouteUpdate, db: AsyncSession = Depends(get_db)
 ):
@@ -72,7 +74,7 @@ async def update_route(
     return route
 
 
-@router.delete("/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(routes.DELETE, status_code=status.HTTP_204_NO_CONTENT)
 async def delete_route(route_id: int, db: AsyncSession = Depends(get_db)):
     route = await require_route(route_id, db)
 
